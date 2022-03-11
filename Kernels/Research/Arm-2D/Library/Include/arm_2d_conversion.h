@@ -22,8 +22,8 @@
  * Description:  Public header file to contain the APIs for colour space
  *               conversions
  *
- * $Date:        01. December 2020
- * $Revision:    V.0.5.0
+ * $Date:        16. Nov 2021
+ * $Revision:    V.1.0.0
  *
  * Target Processor:  Cortex-M cores
  * -------------------------------------------------------------------- */
@@ -46,6 +46,8 @@ extern "C" {
 #   pragma clang diagnostic ignored "-Wunknown-warning-option"
 #   pragma clang diagnostic ignored "-Wreserved-identifier"
 #   pragma clang diagnostic ignored "-Wsign-conversion"
+#elif defined(__IS_COMPILER_IAR__)
+#   pragma diag_suppress=Go029 
 #endif
 
 /*============================ MACROS ========================================*/
@@ -91,6 +93,8 @@ typedef union {
 __STATIC_INLINE void __arm_2d_rgb565_unpack(uint16_t hwColor,
                                             __arm_2d_color_fast_rgb_t * ptRGB)
 {
+    assert(NULL != ptRGB);
+    
     /* uses explicit extraction, leading to a more efficient autovectorized code */
     uint16_t maskRunpk = 0x001f, maskGunpk = 0x003f;
 
@@ -101,6 +105,8 @@ __STATIC_INLINE void __arm_2d_rgb565_unpack(uint16_t hwColor,
 
 __STATIC_INLINE uint16_t __arm_2d_rgb565_pack(__arm_2d_color_fast_rgb_t * ptRGB)
 {
+    assert(NULL != ptRGB);
+    
     arm_2d_color_rgb565_t tOutput = {
         .u5R = (uint16_t) ptRGB->R >> 3,
         .u6G = (uint16_t) ptRGB->G >> 2,
@@ -111,6 +117,8 @@ __STATIC_INLINE uint16_t __arm_2d_rgb565_pack(__arm_2d_color_fast_rgb_t * ptRGB)
 
 __STATIC_INLINE uint32_t __arm_2d_cccn888_pack(__arm_2d_color_fast_rgb_t * ptRGB)
 {
+    assert(NULL != ptRGB);
+    
     arm_2d_color_rgba8888_t tOutput = {
         .u8R = (uint16_t) ptRGB->R,
         .u8G = (uint16_t) ptRGB->G,
@@ -139,6 +147,8 @@ arm_fsm_rt_t arm_2dp_convert_colour_to_rgb565(  arm_2d_op_cl_convt_t *ptOP,
 
 #if defined(__clang__)
 #   pragma clang diagnostic pop
+#elif defined(__IS_COMPILER_IAR__)
+#   pragma diag_warning=Go029 
 #endif
 
 #ifdef   __cplusplus

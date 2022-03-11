@@ -36,7 +36,6 @@
 #if defined(__ARM_2D_HAS_HELIUM__) && __ARM_2D_HAS_HELIUM__
 
 #if defined(__clang__)
-#   pragma clang diagnostic push
 #   pragma clang diagnostic ignored "-Wunknown-warning-option"
 #   pragma clang diagnostic ignored "-Wreserved-identifier"
 #   pragma clang diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
@@ -2628,7 +2627,7 @@ void __arm_2d_impl_rgb565_get_pixel_colour_with_alpha(
 
     /* alpha blending */
     uint16x8_t      vBlended =
-        __arm_2d_rgb565_alpha_blending_single_vec(ptVal, vTarget, chOpacity);
+        __arm_2d_rgb565_blending_scal_opacity_single_vec(ptVal, vTarget, chOpacity);
 
     /* combine 2 predicates, set to true, if point is in the region & values different from color mask */
     vTarget = vpselq_u16(vBlended, vTarget, vcmpneq_m_n_u16(ptVal, MaskColour, p));
@@ -2752,7 +2751,7 @@ void __arm_2d_impl_rgb565_get_pixel_colour_with_alpha_offs_compensated(
 
     /* alpha blending */
     uint16x8_t      vBlended =
-        __arm_2d_rgb565_alpha_blending_single_vec(ptVal, vTarget, chOpacity);
+        __arm_2d_rgb565_blending_scal_opacity_single_vec(ptVal, vTarget, chOpacity);
 
     /* combine 2 predicates, set to true, if point is in the region & values different from color mask */
     vTarget = vpselq_u16(vBlended, vTarget, vcmpneq_m_n_u16(ptVal, MaskColour, p));
@@ -3950,7 +3949,7 @@ void __arm_2d_impl_rgb565_get_pixel_colour_with_alpha(
 
     /* alpha blending */
     uint16x8_t      vBlended =
-        __arm_2d_rgb565_alpha_blending_single_vec(ptVal, vTarget, chOpacity);
+        __arm_2d_rgb565_blending_scal_opacity_single_vec(ptVal, vTarget, chOpacity);
 
     /* combine 2 predicates, set to true, if point is in the region & values different from color mask */
     vTarget = vpselq_u16(vBlended, vTarget, vcmpneq_m_n_u16(ptVal, MaskColour, p));
@@ -4075,7 +4074,7 @@ void __arm_2d_impl_rgb565_get_pixel_colour_with_alpha_offs_compensated(
 
     /* alpha blending */
     uint16x8_t      vBlended =
-        __arm_2d_rgb565_alpha_blending_single_vec(ptVal, vTarget, chOpacity);
+        __arm_2d_rgb565_blending_scal_opacity_single_vec(ptVal, vTarget, chOpacity);
 
     /* combine 2 predicates, set to true, if point is in the region & values different from color mask */
     vTarget = vpselq_u16(vBlended, vTarget, vcmpneq_m_n_u16(ptVal, MaskColour, p));
@@ -6100,12 +6099,66 @@ void __arm_2d_impl_rgb565_to_cccn888(uint16_t *__RESTRICT phwSourceBase,
     }
 }
 
+/* use macro expansion of fill/copy with masking */
+
+#define __API_CAFWM_COLOUR                      gray8
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+#define __API_CAFWM_CFG_1_HORIZONTAL_LINE       1
+#define __API_CAFWM_COLOUR                      gray8
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+#define __API_CAFWM_CFG_CHANNEL_8in32_SUPPORT   1
+#define __API_CAFWM_COLOUR                      gray8
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+
+
+#define __API_CAFWM_COLOUR                      rgb565
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+#define __API_CAFWM_CFG_1_HORIZONTAL_LINE       1
+#define __API_CAFWM_COLOUR                      rgb565
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+#define __API_CAFWM_CFG_CHANNEL_8in32_SUPPORT   1
+#define __API_CAFWM_COLOUR                      rgb565
+
+#include "__arm_2d_alpha_mask_helium.inc"
 
 
 
 
+#define __API_CAFWM_COLOUR                      cccn888
 
-void __arm_2d_impl_rgb565_masks_fill(uint16_t * __RESTRICT ptSourceBase,
+#include "__arm_2d_alpha_mask_helium.inc"
+
+#define __API_CAFWM_CFG_1_HORIZONTAL_LINE       1
+#define __API_CAFWM_COLOUR                      cccn888
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+#define __API_CAFWM_CFG_CHANNEL_8in32_SUPPORT   1
+#define __API_CAFWM_COLOUR                      cccn888
+
+#include "__arm_2d_alpha_mask_helium.inc"
+
+
+
+/*----------------------------------------------------------------------------*
+ * Assembly Patches                                                           *
+ *----------------------------------------------------------------------------*/
+
+#if defined(__IS_COMPILER_GCC__) && __IS_COMPILER_GCC__
+
+__OVERRIDE_WEAK
+void ARM_2D_WRAP_FUNC(__arm_2d_impl_rgb565_masks_fill)(
+                                     uint16_t * __RESTRICT ptSourceBase,
                                      int16_t iSourceStride,
                                      arm_2d_size_t * __RESTRICT ptSourceSize,
                                      uint8_t * __RESTRICT pchSourceMaskBase,
@@ -6321,7 +6374,7 @@ void __arm_2d_impl_rgb565_masks_fill(uint16_t * __RESTRICT ptSourceBase,
 
 
 __OVERRIDE_WEAK
-void __arm_2d_impl_rgb565_src_msk_1h_des_msk_fill(
+void ARM_2D_WRAP_FUNC(__arm_2d_impl_rgb565_src_msk_1h_des_msk_fill)(
                                     uint16_t * __RESTRICT ptSourceBase,
                                     int16_t iSourceStride,
                                     arm_2d_size_t * __RESTRICT ptSourceSize,
@@ -6535,9 +6588,6 @@ void __arm_2d_impl_rgb565_src_msk_1h_des_msk_fill(
     }
 }
 
-
-#if defined(__clang__)
-#   pragma clang diagnostic pop
 #endif
 
 #ifdef   __cplusplus

@@ -42,7 +42,6 @@ extern "C" {
 #endif
 
 #if defined(__clang__)
-#   pragma clang diagnostic push
 #   pragma clang diagnostic ignored "-Wunknown-warning-option"
 #   pragma clang diagnostic ignored "-Wreserved-identifier"
 #   pragma clang diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
@@ -65,8 +64,9 @@ extern "C" {
 #   pragma clang diagnostic ignored "-Wundef"
 #elif defined(__IS_COMPILER_ARM_COMPILER_5__)
 #   pragma diag_suppress 174,177,188,68,513,144
+#elif defined(__IS_COMPILER_IAR__)
+#   pragma diag_suppress=Pa093
 #elif defined(__IS_COMPILER_GCC__)
-#   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
 #endif
 
@@ -81,6 +81,9 @@ extern "C" {
 #define FAST_ATAN_F32_1(x, xabs)    \
                             (x * (PI / 4.0f) + 0.273f * x * (1.0f - xabs))
 #define EPS_ATAN2           1e-5f
+
+
+#define TO_Q16(x)           ((int32_t)(x) << 16)
 
 /*----------------------------------------------------------------------------*
  * Code Template                                                              *
@@ -132,6 +135,138 @@ extern "C" {
 /*============================ LOCAL VARIABLES ===============================*/
 /*============================ IMPLEMENTATION ================================*/
 
+/*----------------------------------------------------------------------------*
+ * Utilities                                                                  *
+ *----------------------------------------------------------------------------*/
+__arm_2d_point_adj_alpha_t
+__arm_2d_point_get_adjacent_alpha_fp(arm_2d_point_float_t *ptPoint)
+{
+    assert(NULL != ptPoint);
+    float x = ptPoint->fX - (int32_t)ptPoint->fX;
+    float y = ptPoint->fY - (int32_t)ptPoint->fY;
+
+    int16_t iXSign = x < 0 ? 1 : 0;
+    int16_t iYSign = y < 0 ? 1 : 0;
+
+    __arm_2d_point_adj_alpha_t tResult = {
+        .tMatrix = {
+            [0] = {
+                .tOffset = {
+                    .iX = -iXSign,
+                    .iY = -iYSign,
+                },
+                .chAlpha = (uint8_t)(
+                                ((float)(1-iXSign)  - (float)x)     //!< x
+                            *   ((float)(1-iYSign)  - (float)y)     //!< y
+                            *   256.0f
+                            ),
+            },
+            [1] = {
+                .tOffset = {
+                    .iX = -iXSign + 1,
+                    .iY = -iYSign,
+                },
+                .chAlpha = (uint8_t)(
+                                ((float)iXSign      + (float)x)     //!< x
+                            *   ((float)(1-iYSign)  - (float)y)     //!< y
+                            *   256.0f
+                            ),
+            },
+            [2] = {
+                .tOffset = {
+                    .iX = -iXSign,
+                    .iY = -iYSign + 1,
+                },
+                .chAlpha = (uint8_t)(
+                                ((float)(1-iXSign)  - (float)x)     //!< x
+                            *   ((float)iYSign      + (float)y)     //!< y
+                            *   256.0f
+                            ),
+            },
+            [3] = {
+                .tOffset = {
+                    .iX = -iXSign + 1,
+                    .iY = -iYSign +1,
+                },
+                .chAlpha = (uint8_t)(
+                                ((float)iXSign      + (float)x)     //!< x
+                            *   ((float)iYSign      + (float)y)     //!< y
+                            *   256.0f
+                            ),
+            },
+        },
+    };
+
+    return tResult;
+}
+
+__arm_2d_point_adj_alpha_t
+__arm_2d_point_get_adjacent_alpha_q16(arm_2d_point_fx_t *ptPoint)
+{
+    assert(NULL != ptPoint);
+    int32_t x = ptPoint->X  & 0xFFFF;
+    int32_t y = ptPoint->Y  & 0xFFFF;
+
+    x |= ((ptPoint->X < 0) * 0xFFFF0000);
+    y |= ((ptPoint->Y < 0) * 0xFFFF0000);
+
+    int_fast16_t iXSign = x < 0;// ? 1 : 0;
+    int_fast16_t iYSign = y < 0;// ? 1 : 0;
+
+    __arm_2d_point_adj_alpha_t tResult = {
+        .tMatrix = {
+            [0] = {
+                .tOffset = {
+                    .iX = -iXSign,
+                    .iY = -iYSign,
+                },
+                .chAlpha = (uint8_t)__USAT(
+             MUL_Q16(MUL_Q16(   (TO_Q16(1-iXSign)   - x)        //!< x
+                            ,   (TO_Q16(1-iYSign)   - y))       //!< y
+                            ,   TO_Q16(256)
+                            ) >> 16, 8),
+            },
+            [1] = {
+                .tOffset = {
+                    .iX = -iXSign + 1,
+                    .iY = -iYSign,
+                },
+                .chAlpha = (uint8_t)__USAT(
+             MUL_Q16(MUL_Q16(   (TO_Q16(iXSign)     + x)        //!< x
+                            ,   (TO_Q16(1-iYSign)   - y))       //!< y
+                            ,   TO_Q16(256)
+                            ) >> 16, 8),
+            },
+            [2] = {
+                .tOffset = {
+                    .iX = -iXSign,
+                    .iY = -iYSign + 1,
+                },
+                .chAlpha = (uint8_t)__USAT(
+             MUL_Q16(MUL_Q16(   (TO_Q16(1-iXSign)   - x)        //!< x
+                            ,   (TO_Q16(iYSign)     + y))       //!< y
+                            ,   TO_Q16(256)
+                            ) >> 16, 8),
+            },
+            [3] = {
+                .tOffset = {
+                    .iX = -iXSign + 1,
+                    .iY = -iYSign +1,
+                },
+                .chAlpha = (uint8_t)__USAT(
+             MUL_Q16(MUL_Q16(   (TO_Q16(iXSign)     + x)        //!< x
+                            ,   (TO_Q16(iYSign)     + y))       //!< y
+                            ,   TO_Q16(256)
+                            ) >> 16, 8),
+            },
+        },
+    };
+
+    return tResult;
+}
+
+
+
 #if __ARM_2D_CFG_FORCED_FIXED_POINT_ROTATION__
 
 static
@@ -144,7 +279,7 @@ void __arm_2d_rotate_regression(arm_2d_size_t * __RESTRICT ptCopySize,
     )
 {
 #define ONE_BY_2PI_Q31      341782637.0f
-#define TO_Q16(x)           ((x) << 16)
+//#define TO_Q16(x)           ((x) << 16)
 
     int_fast16_t        iHeight = ptCopySize->iHeight;
     int_fast16_t        iWidth = ptCopySize->iWidth;
@@ -351,7 +486,7 @@ arm_2d_point_float_t *__arm_2d_rotate_point(const arm_2d_location_t *ptLocation,
 
 static arm_2d_err_t __arm_2d_rotate_preprocess_source(arm_2d_op_rotate_t *ptThis)
 {
-    arm_2d_tile_t *ptSource = this.Source.ptTile;
+    arm_2d_tile_t *ptSource = (arm_2d_tile_t *)this.Source.ptTile;
 
     memset(ptSource, 0, sizeof(*ptSource));
 
@@ -923,14 +1058,6 @@ const __arm_2d_op_info_t ARM_2D_OP_ROTATE_WITH_ALPHA_RGB888 = {
         },
     },
 };
-
-#if defined(__clang__)
-#   pragma clang diagnostic pop
-#elif defined(__IS_COMPILER_ARM_COMPILER_5__)
-#   pragma diag_warning 174,177,188,68,513,144
-#elif defined(__IS_COMPILER_GCC__)
-#   pragma GCC diagnostic pop
-#endif
 
 #ifdef   __cplusplus
 }

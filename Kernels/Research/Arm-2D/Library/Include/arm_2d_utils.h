@@ -39,6 +39,7 @@
 #   pragma clang diagnostic ignored "-Wpadded"
 #   pragma clang diagnostic ignored "-Wsign-conversion"
 #   pragma clang diagnostic ignored "-Wimplicit-int-conversion"
+#   pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
 #   pragma clang diagnostic ignored "-Wundef"
 #elif defined(__IS_COMPILER_GCC__)
 #   pragma GCC diagnostic push
@@ -53,7 +54,6 @@
 /*! \note arm-2d relies on CMSIS 5.4.0 and above.
  */
 #include "cmsis_compiler.h"
-#include <arm_math.h>
 
 #ifdef   __cplusplus
 extern "C" {
@@ -305,7 +305,7 @@ extern "C" {
 #endif
 
 #ifndef __OVERRIDE_WEAK
-#   define __OVERRIDE_WEAK          __USED
+#   define __OVERRIDE_WEAK
 #endif
 
 #define ARM_2D_SAFE_NAME(...)    ARM_CONNECT(__,__LINE__,##__VA_ARGS__)
@@ -319,8 +319,21 @@ extern "C" {
                         __set_PRIMASK(ARM_2D_SAFE_NAME(temp)))
 
 
+#undef ARM_2D_WRAP_FUNC
+#undef __ARM_2D_WRAP_FUNC
+#undef ARM_2D_ORIG_FUNC
+#undef __ARM_2D_ORIG_FUNC
 
+#if defined(__IS_COMPILER_ARM_COMPILER_6__)
+#   define __ARM_2D_WRAP_FUNC(__FUNC)           $Sub$$##__FUNC
+#   define __ARM_2D_ORIG_FUNC(__FUNC)           $Super$$## __FUNC
+#else
+#   define __ARM_2D_WRAP_FUNC(x) __wrap_ ## x
+#   define __ARM_2D_ORIG_FUNC(x) __real_ ## x
+#endif
 
+#define ARM_2D_WRAP_FUNC(__FUNC)                __ARM_2D_WRAP_FUNC(__FUNC)
+#define ARM_2D_ORIG_FUNC(__FUNC)                __ARM_2D_ORIG_FUNC(__FUNC)
 
 /*----------------------------------------------------------------------------*
  * List Operations                                                            *

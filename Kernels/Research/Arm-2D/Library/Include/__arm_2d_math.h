@@ -36,6 +36,8 @@
 
 #if defined(__clang__)
 #   pragma clang diagnostic push
+#   pragma clang diagnostic ignored "-Wunknown-warning-option"
+#   pragma clang diagnostic ignored "-Wreserved-identifier"
 #   pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #   pragma clang diagnostic ignored "-Wpadded"
 #   pragma clang diagnostic ignored "-Wsign-conversion"
@@ -46,13 +48,11 @@
 #   pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
-/*! \note arm-2d relies on CMSIS 5.8.0 and above.
- */
-#include <arm_math.h>
-
 #if     defined(__IS_COMPILER_ARM_COMPILER_5__)                                 \
     &&  defined(__ARM_2D_HAS_HELIUM__) && __ARM_2D_HAS_HELIUM__
-#   warning 'Arm Compiler 5 doesn\'t support Armv8.1-M architecture, please use Arm Compiler 5 instead. If you insist using Arm Compiler 5, __ARM_2D_HAS_HELIUM__ is forced to 0.'
+#   warning 'Arm Compiler 5 doesn\'t support Armv8.1-M architecture, please use \
+Arm Compiler 5 instead. If you insist using Arm Compiler 5,\
+ __ARM_2D_HAS_HELIUM__ is forced to 0.'
 #   undef __ARM_2D_HAS_HELIUM__
 #   define __ARM_2D_HAS_HELIUM__            0
 #endif
@@ -74,6 +74,8 @@ typedef float float16_t;
 #endif
 
 #endif
+
+#include "arm_math.h"
 
 
 #ifdef   __cplusplus
